@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Laviz Daily Checklist</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0e0e;
+    --surface: #161616;
+    --surface2: #1e1e1e;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #f0ede8;
+    --muted: #6b6b6b;
+    --accent: #c8f060;
+    --accent2: #f0c060;
+    --nepal: #60d4f0;
+    --done-bg: rgba(200,240,96,0.06);
+    --done-border: rgba(200,240,96,0.2);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    min-height: 100vh;
+  }
+  .noise {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    opacity: 0.4;
+  }
+  .container { max-width: 720px; margin: 0 auto; padding: 48px 24px 80px; position: relative; z-index: 1; }
+
+  /* Header */
+  .header { margin-bottom: 48px; }
+  .brand { font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+  .title { font-family: 'Syne', sans-serif; font-size: 36px; font-weight: 800; line-height: 1.1; color: var(--text); }
+  .title span { color: var(--accent); }
+  .subtitle { font-size: 13px; color: var(--muted); margin-top: 8px; font-weight: 300; }
+
+  /* Day tabs */
+  .day-nav { display: flex; gap: 6px; margin-bottom: 32px; flex-wrap: wrap; }
+  .day-btn {
+    font-family: 'Syne', sans-serif;
+    font-size: 12px; font-weight: 600;
+    padding: 7px 14px;
+    border-radius: 4px;
+    border: 0.5px solid var(--border2);
+    background: var(--surface);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.05em;
+  }
+  .day-btn:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+  .day-btn.active { background: var(--accent); color: #0e0e0e; border-color: var(--accent); }
+  .day-btn.complete { border-color: var(--done-border); color: var(--accent); }
+
+  /* Day view */
+  .day-view { display: none; animation: fadeIn 0.2s ease; }
+  .day-view.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  .day-header { margin-bottom: 28px; }
+  .day-name { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; }
+  .day-date { font-size: 12px; color: var(--muted); margin-top: 4px; letter-spacing: 0.05em; }
+  .progress-bar { margin-top: 14px; height: 3px; background: var(--surface2); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.4s ease; }
+  .progress-label { font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+  /* Section */
+  .section { margin-bottom: 28px; }
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 0.5px solid var(--border);
+  }
+
+  /* Task */
+  .task {
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    background: var(--surface);
+    transition: all 0.25s;
+    overflow: hidden;
+  }
+  .task:hover { border-color: var(--border2); }
+  .task.done { background: var(--done-bg); border-color: var(--done-border); }
+
+  .task-top {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .checkbox {
+    width: 20px; height: 20px;
+    border-radius: 4px;
+    border: 1.5px solid var(--border2);
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  .task.done .checkbox {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .check-icon { opacity: 0; transform: scale(0.5); transition: all 0.2s; }
+  .task.done .check-icon { opacity: 1; transform: scale(1); }
+
+  .task-label { font-size: 14px; font-weight: 500; flex: 1; transition: color 0.2s; }
+  .task.done .task-label { color: var(--muted); text-decoration: line-through; text-decoration-color: rgba(107,107,107,0.5); }
+
+  .expand-btn {
+    font-size: 10px; color: var(--muted);
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 0.5px solid var(--border);
+    background: transparent;
+    cursor: pointer;
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .expand-btn:hover { border-color: var(--border2); color: var(--text); }
+
+  .task-notes {
+    display: none;
+    padding: 0 16px 14px 50px;
+  }
+  .task-notes.open { display: block; }
+  .notes-label { font-size: 10px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; font-family: 'Syne', sans-serif; font-weight: 700; }
+  .notes-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 0.5px solid var(--border2);
+    border-radius: 6px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 300;
+    resize: none;
+    min-height: 72px;
+    line-height: 1.6;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .notes-input:focus { border-color: rgba(200,240,96,0.3); }
+  .notes-input::placeholder { color: var(--muted); }
+
+  /* Summary strip */
+  .summary {
+    margin-top: 32px;
+    padding: 16px 20px;
+    border-radius: 8px;
+    border: 0.5px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .summary-text { font-size: 12px; color: var(--muted); font-weight: 300; }
+  .summary-text strong { color: var(--accent); font-weight: 500; }
+  .save-btn {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.1em;
+    padding: 8px 18px;
+    border-radius: 4px;
+    border: none;
+    background: var(--accent);
+    color: #0e0e0e;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+  .save-btn:hover { background: #d4f570; }
+  .save-btn:active { transform: scale(0.97); }
+  .saved-msg { font-size: 11px; color: var(--accent); font-family: 'Syne', sans-serif; font-weight: 600; letter-spacing: 0.08em; opacity: 0; transition: opacity 0.3s; }
+  .saved-msg.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div class="noise"></div>
+<div class="container">
+
+  <div class="header">
+    <div class="brand">Laviz Nepal × India</div>
+    <div class="title">Daily<br>Checklist <span>April</span></div>
+    <div class="subtitle">Apr 20 – Apr 30, 2025 · Stay consistent, stay building.</div>
+  </div>
+
+  <div class="day-nav" id="dayNav"></div>
+  <div id="dayViews"></div>
+
+</div>
+
+<script>
+const DAYS = [];
+for (let d = 20; d <= 30; d++) {
+  const date = new Date(2025, 3, d);
+  const names = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const fullNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  DAYS.push({ d, name: fullNames[date.getDay()], short: names[date.getDay()], label: `Apr ${d}` });
+}
+
+const SECTIONS = [
+  {
+    title: 'Morning',
+    tasks: [
+      { id: 'wakeup', label: 'Wake up at 6 AM', note: false },
+      { id: 'exercise', label: 'Exercise / Walk', note: false },
+      { id: 'shower', label: 'Shower', note: false },
+      { id: 'plan', label: 'Plan the Day', note: true, placeholder: "What are my goals for today?" },
+    ]
+  },
+  {
+    title: 'Work',
+    tasks: [
+      { id: 'office', label: 'Office', note: true, placeholder: "What did I do at the office today?" },
+      { id: 'content', label: 'Content Activity', note: true, placeholder: "What content did I shoot / edit / post?" },
+      { id: 'stories', label: 'Post Stories on Instagram', note: false },
+    ]
+  },
+  {
+    title: 'Knowledge',
+    tasks: [
+      { id: 'learn', label: 'Learn', note: true, placeholder: "What did I learn today?" },
+    ]
+  },
+  {
+    title: 'Evening',
+    tasks: [
+      { id: 'finance', label: 'Log Finances (10 mins)', note: false },
+      { id: 'review', label: 'Review & Plan Tomorrow', note: false },
+    ]
+  }
+];
+
+const state = JSON.parse(localStorage.getItem('laviz_checklist') || '{}');
+
+function save() {
+  localStorage.setItem('laviz_checklist', JSON.stringify(state));
+}
+
+function getState(day, taskId) {
+  return state[day] && state[day][taskId] ? state[day][taskId] : { done: false, note: '' };
+}
+
+function getProgress(day) {
+  const allTasks = SECTIONS.flatMap(s => s.tasks);
+  const done = allTasks.filter(t => getState(day, t.id).done).length;
+  return { done, total: allTasks.length };
+}
+
+function buildDay(day) {
+  const div = document.createElement('div');
+  div.className = 'day-view';
+  div.id = `day-${day.d}`;
+
+  const { done, total } = getProgress(day.d);
+  const pct = Math.round((done / total) * 100);
+
+  div.innerHTML = `
+    <div class="day-header">
+      <div class="day-name">${day.name}</div>
+      <div class="day-date">${day.label}, 2025</div>
+      <div class="progress-bar"><div class="progress-fill" id="pf-${day.d}" style="width:${pct}%"></div></div>
+      <div class="progress-label" id="pl-${day.d}">${done} of ${total} tasks done</div>
+    </div>
+    ${SECTIONS.map(section => `
+      <div class="section">
+        <div class="section-title">${section.title}</div>
+        ${section.tasks.map(task => {
+          const s = getState(day.d, task.id);
+          return `
+          <div class="task ${s.done ? 'done' : ''}" id="task-${day.d}-${task.id}">
+            <div class="task-top" onclick="toggleTask(${day.d}, '${task.id}', ${!!task.note})">
+              <div class="checkbox">
+                <svg class="check-icon" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M2 6L5 9L10 3" stroke="#0e0e0e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <span class="task-label">${task.label}</span>
+              ${task.note ? `<button class="expand-btn" onclick="event.stopPropagation(); toggleNote(${day.d}, '${task.id}')">Notes</button>` : ''}
+            </div>
+            ${task.note ? `
+            <div class="task-notes ${s.note ? 'open' : ''}" id="notes-${day.d}-${task.id}">
+              <div class="notes-label">Your notes</div>
+              <textarea class="notes-input" id="textarea-${day.d}-${task.id}" placeholder="${task.placeholder || 'Write here...'}" oninput="saveNote(${day.d}, '${task.id}', this.value)">${s.note || ''}</textarea>
+            </div>` : ''}
+          </div>`;
+        }).join('')}
+      </div>
+    `).join('')}
+    <div class="summary">
+      <div class="summary-text"><strong id="sum-${day.d}">${done}/${total}</strong> tasks completed today</div>
+      <span class="saved-msg" id="saved-${day.d}">Saved ✓</span>
+      <button class="save-btn" onclick="saveDay(${day.d})">Save Day</button>
+    </div>
+  `;
+  return div;
+}
+
+function toggleTask(day, taskId, hasNote) {
+  if (!state[day]) state[day] = {};
+  if (!state[day][taskId]) state[day][taskId] = { done: false, note: '' };
+  state[day][taskId].done = !state[day][taskId].done;
+  save();
+
+  const el = document.getElementById(`task-${day}-${taskId}`);
+  if (state[day][taskId].done) el.classList.add('done');
+  else el.classList.remove('done');
+
+  updateProgress(day);
+  updateDayBtn(day);
+}
+
+function toggleNote(day, taskId) {
+  const notesEl = document.getElementById(`notes-${day}-${taskId}`);
+  notesEl.classList.toggle('open');
+}
+
+function saveNote(day, taskId, val) {
+  if (!state[day]) state[day] = {};
+  if (!state[day][taskId]) state[day][taskId] = { done: false, note: '' };
+  state[day][taskId].note = val;
+  save();
+}
+
+function updateProgress(day) {
+  const allTasks = SECTIONS.flatMap(s => s.tasks);
+  const done = allTasks.filter(t => getState(day, t.id).done).length;
+  const total = allTasks.length;
+  const pct = Math.round((done / total) * 100);
+  document.getElementById(`pf-${day}`).style.width = pct + '%';
+  document.getElementById(`pl-${day}`).textContent = `${done} of ${total} tasks done`;
+  document.getElementById(`sum-${day}`).textContent = `${done}/${total}`;
+}
+
+function updateDayBtn(day) {
+  const allTasks = SECTIONS.flatMap(s => s.tasks);
+  const done = allTasks.filter(t => getState(day, t.id).done).length;
+  const btn = document.getElementById(`btn-${day}`);
+  if (done === allTasks.length) btn.classList.add('complete');
+  else btn.classList.remove('complete');
+}
+
+function saveDay(day) {
+  save();
+  const msg = document.getElementById(`saved-${day}`);
+  msg.classList.add('show');
+  setTimeout(() => msg.classList.remove('show'), 2000);
+}
+
+function showDay(d) {
+  document.querySelectorAll('.day-view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.day-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`day-${d}`).classList.add('active');
+  document.getElementById(`btn-${d}`).classList.add('active');
+}
+
+// Build UI
+const nav = document.getElementById('dayNav');
+const views = document.getElementById('dayViews');
+
+DAYS.forEach(day => {
+  const btn = document.createElement('button');
+  btn.className = 'day-btn';
+  btn.id = `btn-${day.d}`;
+  btn.innerHTML = `<span style="font-size:10px;display:block;opacity:0.6">${day.short}</span>${day.d}`;
+  btn.onclick = () => showDay(day.d);
+  nav.appendChild(btn);
+
+  views.appendChild(buildDay(day));
+  updateDayBtn(day.d);
+});
+
+// Show today or Apr 20
+const today = new Date();
+const todayD = today.getMonth() === 3 && today.getDate() >= 20 && today.getDate() <= 30 ? today.getDate() : 20;
+showDay(todayD);
+</script>
+</body>
+</html>
